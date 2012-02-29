@@ -1,0 +1,14 @@
+{
+  "name"          : "Together for Backbone",
+  "description"   : "Adds simple Socket sending via backbone",
+  "url"           : "http://backbonejs.org",
+  "keywords"      : ["util", "functional", "server", "client", "browser"],
+  "author"        : "Kav Latiolais <kav@liffft.com>",
+  "contributors"  : [],
+  "dependencies"  : {
+    "backbone"  : ">=0.9.1",
+    "redis"     : ">=0.7.1" 
+  },
+  "main"          : "index",
+  "version"       : "0.0.1"
+}
