@@ -10,12 +10,6 @@ exports.listen = (io) ->
   
   Together.Model =
     Backbone.Model.extend
-      initialize: ->
-        ions = io.of("/Together#{@url()}")
-        @bind 'all', (eventName, data) =>
-          if eventName.indexOf(':') is -1
-            ions.sockets.emit? eventName, data
-            
       sync: (method, model, options) ->
         return false unless method in ['create','read','update','delete']    
         sync[method] @collection.url, model, options.success, (error) ->
@@ -30,14 +24,11 @@ exports.listen = (io) ->
       model: Together.Model
       initialize: ->
         ions = io.of("/Together#{@url}")
-        # Moving this to a per model socket because we can't send everything down.
-        
-        # @bind 'all', (eventName, data) =>
-        #   if eventName.indexOf(':') is -1
-        #     ions.sockets.emit? eventName, data
+        @bind 'all', (eventName, data) =>
+          if eventName.indexOf(':') is -1
+            ions.sockets.emit? eventName, data
         ions.on 'connection', (socket) =>
           console.log socket
-          # filteredCollection = (model.authorized(token) for model in @models) 
           socket.emit 'reset', @
         @fetch()
         
