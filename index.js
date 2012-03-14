@@ -1,1 +1,1 @@
-module.exports = require('./lib/together-bb/together.coffee');
+module.exports = require('./together-bb/lib/together.coffee');
