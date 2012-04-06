@@ -1,8 +1,8 @@
-Together = {}
-Together.Model =
+@Together = {}
+@Together.Model =
   Backbone.Model
       
-Together.Collection =
+@Together.Collection =
   Backbone.Collection.extend
     model: Together.Model
     initialize: (models, options)->
