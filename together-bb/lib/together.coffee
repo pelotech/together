@@ -2,7 +2,7 @@ Backbone = require('backbone')
 redis = require('redis')
 
 exports.listen = (io) ->
-  Together = {}
+  Together = Backbone
 
   R = redis.createClient()
   R.on 'error', (err) ->
@@ -28,7 +28,6 @@ exports.listen = (io) ->
           if eventName.indexOf(':') is -1
             ions.sockets.emit? eventName, data
         ions.on 'connection', (socket) =>
-          console.log socket
           socket.emit 'reset', @
         @fetch()
         
