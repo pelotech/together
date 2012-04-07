@@ -8,21 +8,20 @@ exports.listen = (io) ->
   R.on 'error', (err) ->
     console.log "Error:#{err}"
   
-  Together.Model =
-    Backbone.Model.extend
-      sync: (method, model, options) ->
-        return false unless method in ['create','read','update','delete']    
-        sync[method] @collection.url, model, options.success, (error) ->
-          console.log "ERROR:#{error}"
-          options.error(error)
-      
-      authorized: ->
-        return @
+  class Together.Model extends Backbone.Model
+    sync: (method, model, options) ->
+      return false unless method in ['create','read','update','delete']    
+      sync[method] @collection.url, model, options.success, (error) ->
+        console.log "ERROR:#{error}"
+        options.error(error)
+    
+    authorized: ->
+      return @
   
-  Together.Collection =
-    Backbone.Collection.extend
+  class Together.Collection extends Backbone.Collection
       model: Together.Model
-      initialize: ->
+      constructor:(models, options) ->
+        super(models,options)
         ions = io.of("/Together#{@url}")            
         ions.on 'connection', (socket) =>
           socket.emit 'reset', @
