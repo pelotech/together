@@ -23,12 +23,13 @@ exports.listen = (io) ->
     Backbone.Collection.extend
       model: Together.Model
       initialize: ->
-        ions = io.of("/Together#{@url}")
-        @bind 'all', (eventName, data) =>
-          if eventName.indexOf(':') is -1
-            ions.sockets.emit? eventName, data
+        ions = io.of("/Together#{@url}")            
         ions.on 'connection', (socket) =>
           socket.emit 'reset', @
+          @bind 'all', (eventName, data) ->
+            if eventName.indexOf(':') is -1
+              socket.emit eventName, data
+              socket.broadcast.emit eventName, data
         @fetch()
         
       sync: (method, model, options) ->        
