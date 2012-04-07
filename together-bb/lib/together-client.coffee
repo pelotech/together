@@ -23,3 +23,5 @@ for key in Object.keys Backbone
       socket = io.connect "#{window.location.origin}/Together#{@url}"
       socket.on 'reset', (data) =>
         @reset(data)
+      socket.on 'add', (data) =>
+        @add(data)
