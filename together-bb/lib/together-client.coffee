@@ -4,17 +4,14 @@ for key in Object.keys Backbone
 
 class @Together.Model extends Backbone.Model
   get: (attribute) ->
-    value = Backbone.Model.prototype.get.call(this, attribute)
-    if _.isFunction(value)
+    value = super
+    if toString.call(value) is '[object Function]'
       return value.call this
     else
       return value
   toJSON: () ->
-    self = this
     data = {}
-    json = Backbone.Model.prototype.toJSON.call(this)
-    _.each json, (value, key) ->
-        data[key] = self.get(key)
+    data[key] = @get(key) for value, key in super
     return data
       
 class @Together.Collection extends Backbone.Collection

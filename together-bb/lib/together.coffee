@@ -2,7 +2,9 @@ Backbone = require('backbone')
 redis = require('redis')
 
 exports.listen = (io) ->
-  Together = Backbone
+  Together = {}
+  for key in Object.keys Backbone
+    Together[key] = Backbone[key]
 
   R = redis.createClient()
   R.on 'error', (err) ->
@@ -14,9 +16,18 @@ exports.listen = (io) ->
       sync[method] @collection.url, model, options.success, (error) ->
         console.log "ERROR:#{error}"
         options.error(error)
-    
     authorized: ->
       return @
+    get: (attribute) ->
+      value = super
+      if toString.call(value) is '[object Function]'
+        return value.call this
+      else
+        return value
+    toJSON: () ->
+      data = {}
+      data[key] = @get(key) for value, key in super
+      return data
   
   class Together.Collection extends Backbone.Collection
       model: Together.Model
