@@ -33,14 +33,14 @@ exports.listen = (io) ->
       model: Together.Model
       constructor:(models, options) ->
         super(models,options)
-        ions = io.of("/Together#{@url}")            
-        ions.on 'connection', (socket) =>
-          socket.emit 'reset', @
-          @bind 'all', (eventName, data) ->
-            if eventName.indexOf(':') is -1
-              socket.emit eventName, data
-              socket.broadcast.emit eventName, data
-        @fetch()
+        unless options?.socket? and options.socket is false
+          ions = io.of("/Together#{@url}")            
+          ions.on 'connection', (socket) =>
+            socket.emit 'reset', @
+            @bind 'all', (eventName, data) ->
+              if eventName.indexOf(':') is -1
+                socket.emit eventName, data
+                socket.broadcast.emit eventName, data
         
       sync: (method, model, options) ->        
         switch
