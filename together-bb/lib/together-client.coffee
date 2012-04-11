@@ -5,13 +5,13 @@ for key in Object.keys Backbone
 class @Together.Model extends Backbone.Model
   get: (attribute) ->
     value = super
-    if toString.call(value) is '[object Function]'
+    if toString.call(value) is '[object Object]'
       return value.call this
     else
       return value
   toJSON: () ->
     data = {}
-    data[key] = @get(key) for value, key in super
+    data[key] = @get(key) for key of super
     return data
       
 class @Together.Collection extends Backbone.Collection
