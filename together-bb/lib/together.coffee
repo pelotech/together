@@ -1,5 +1,6 @@
-Backbone = require('backbone')
-redis = require('redis')
+Backbone = require 'backbone'
+redis = require 'redis'
+winston = require 'winston'
 
 exports.listen = (io) ->
   Together = {}
@@ -8,13 +9,13 @@ exports.listen = (io) ->
 
   R = redis.createClient()
   R.on 'error', (err) ->
-    console.log "Error:#{err}"
+    winston.error "Together.R.on('error'): #{err}"
   
   class Together.Model extends Backbone.Model
     sync: (method, model, options) ->
       return false unless method in ['create','read','update','delete']    
       sync[method] @collection.url, model, options.success, (error) ->
-        console.log "ERROR:#{error}"
+        winston.error "Together.Model.sync: #{error}"
         options.error(error)
     authorized: ->
       return @
@@ -45,10 +46,10 @@ exports.listen = (io) ->
     sync: (method, model, options) ->        
       switch
         when 'read'
-          console.log "DEBUG: #{method} called on #{@url} collection"
+          winston.verbose "Together.Collection.sync: #{method} called on #{@url} collection"
           sync.reads @url, model, options, options.success, options.error
         else
-          console.log "DEBUG: #{method} called on Rooms but was not handled"
+          winston.verbose "Together.Collection.sync: #{method} called on #{@url} collection but was not handled"
     createAll: (jsonArray, cb) ->
       cbCount = jsonArray.length
       cbIndex = 0
@@ -70,7 +71,7 @@ exports.listen = (io) ->
             return cb()
         }
   Together.CloseDb = ->
-    console.log "DEBUG: Closing Redis Connection"
+    winston.verbose "Together.CloseDb: closing redis connection"
     R.quit()
 
 
@@ -96,7 +97,7 @@ exports.listen = (io) ->
       R.hexists key, model.get('id'), (err, result) ->
         return error err if err?
         if result is 0
-          console.log "DEBUG-Redis: #{model.get 'id'} id doesn't exist, calling create" 
+          winston.verbose "Together.sync.update: #{model.get 'id'} id doesn't exist, calling create" 
           return sync.create(key, model, success, error)
         R.hset key, model.get('id'), JSON.stringify(model), (err, result) ->
           return error err if err?
@@ -106,7 +107,7 @@ exports.listen = (io) ->
       return error false unless model.get('id')?
       R.hdel key, model.get('id'), (err, result) ->
         return error err if err?
-        return error "DEBUG-Redis: #{model.get 'id'} id doesn't exist, nothing happened" if result is 0
+        return error "#{model.get 'id'} id doesn't exist, nothing happened" if result is 0
         return success model
     
     reads: (key, model, options, success, error) ->
