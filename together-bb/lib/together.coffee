@@ -51,25 +51,29 @@ exports.listen = (io) ->
         else
           winston.verbose "Together.Collection.sync: #{method} called on #{@url} collection but was not handled"
     createAll: (jsonArray, cb) ->
-      cbCount = jsonArray.length
-      cbIndex = 0
-      cb() unless jsonArray.length > 0
-      for item in jsonArray
-        @create item, {success: () ->
-          if ++cbIndex >= cbCount
-            return cb()
-        }
+      winston.verbose "Together.Collection.createAll: starting for #{jsonArray.length} items"
+      return cb() unless jsonArray.length > 0 
+      byId = {}
+      for json in jsonArray
+        byId[json.id] = JSON.stringify(json)
+      
+      R.hmset @url, byId, (error, results) =>
+        if error?
+          winston.warn "Together.Collection.createAll: post-hmset error #{error}"
+          return cb error
+        for item in jsonArray
+          @models.push new @model(item)
+        return cb()
     destroyAll: (cb) ->
-      copy = @models.slice(0)
-      cbCount = @length
-      cbIndex = 0
-      cb() unless copy.length > 0
-      copy.forEach (item) =>
-        item.destroy {success: () =>
-          if ++cbIndex >= cbCount
-            @reset()
-            return cb()
-        }
+      return cb() unless @models.length > 0
+      args = [@url]
+      @models.forEach (item) ->
+        args.push item.get('id')
+      R.hdel args, (error, result) ->
+        if error?
+          winston.warn "Together.Collection.destroyAll: post-hdel error #{error}"
+          return cb error
+        return cb()
   Together.CloseDb = ->
     winston.verbose "Together.CloseDb: closing redis connection"
     R.quit()
