@@ -38,6 +38,10 @@ exports.listen = (io) ->
         ions = io.of("/Together#{@url}")            
         ions.on 'connection', (socket) =>
           socket.emit 'reset', @
+          socket.on 'fetch', ({filter, filterParamters}) ->
+            socket.filter = filter
+            socket.filterParamters = filter
+            
           @bind 'all', (eventName, data) ->
             if eventName.indexOf(':') is -1
               socket.emit eventName, data
