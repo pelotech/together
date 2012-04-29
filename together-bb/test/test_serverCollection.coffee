@@ -1,9 +1,9 @@
 winston = require 'winston'
 winston.remove winston.transports.Console
-# winston.add winston.transports.Console,
-#   colorize: true,
-#   level: 'verbose'
-#   timestamp: true
+winston.add winston.transports.Console,
+  colorize: true,
+  level: 'verbose'
+  timestamp: true
 
 chai = require('chai')
 chai.Assertion.includeStack = true;
@@ -19,7 +19,7 @@ R = redis.createClient()
 describe 'Together.Collection', () ->
   collection = null
   model = Together.Model
-  key = 'randomKey'
+  key = 'togetherTestingKey'
 
   beforeEach () ->
     collection = new Together.Collection
@@ -61,6 +61,24 @@ describe 'Together.Collection', () ->
         R.hget key, id2, (error, result) ->
           JSON.parse(result).should.eql {id:id2} 
           internalDone()
+
+    it 'is scalable', (done) ->
+      @timeout 1000 * 60 * 2
+      winston.info 'starting to create the items'
+      max = 10000
+      items = ({id: '34234342.2012-04-' + index, value:'some text', blahblahblah: "something some thing something", url:"http://slkjweroiuwerpaldsjkfpoiauwjerkjasdf;lkjsdf", moremoremore:"hellwerpoiuasdf;lkjasdpoiutwa;elkjasd;lkfjgas; ldkfjas;ldfjk"} for index in [0..max - 1])
+          
+      winston.info 'starting the createAll call' 
+      start = new Date()
+
+      collection.createAll items, () ->
+        collection.models.length.should.equal max
+        end = new Date()
+        delta = end.valueOf() - start.valueOf()
+        delta.should.be.below 1000 * 60 
+        done()
+
+        
 
   describe '#destroyAll', () ->
     it 'calls back on an empty collection', (done) ->

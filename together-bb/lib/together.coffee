@@ -55,29 +55,34 @@ exports.listen = (io) ->
         else
           winston.verbose "Together.Collection.sync: #{method} called on #{@url} collection but was not handled"
     createAll: (jsonArray, cb) ->
-      winston.verbose "Together.Collection.createAll: starting for #{jsonArray.length} items"
-      return cb() unless jsonArray.length > 0 
-      byId = {}
-      for json in jsonArray
-        byId[json.id] = JSON.stringify(json)
-      
-      R.hmset @url, byId, (error, results) =>
-        if error?
-          winston.warn "Together.Collection.createAll: post-hmset error #{error}"
-          return cb error
-        for item in jsonArray
-          @models.push new @model(item)
-        return cb()
+      cbCount = jsonArray.length
+      cbIndex = 0
+      winston.info "createAll started with #{cbCount} items"
+      cb() unless jsonArray.length > 0
+      callback = 
+        success: () ->
+          if ++cbIndex >= cbCount
+            winston.info "all creates are finished with #{cbCount} items"
+            return cb()
+
+      index = 0
+      for item in jsonArray
+        index++
+        do (item) =>
+          setTimeout((() => @create(item, callback)), index) 
+      winston.info "finished scheduling all creates for #{cbCount} items"
+
     destroyAll: (cb) ->
-      return cb() unless @models.length > 0
-      args = [@url]
-      @models.forEach (item) ->
-        args.push item.get('id')
-      R.hdel args, (error, result) ->
-        if error?
-          winston.warn "Together.Collection.destroyAll: post-hdel error #{error}"
-          return cb error
-        return cb()
+      copy = @models.slice(0)
+      cbCount = @length
+      cbIndex = 0
+      cb() unless copy.length > 0
+      copy.forEach (item) =>
+        item.destroy 
+          success: () =>
+            if ++cbIndex >= cbCount
+              @reset()
+              return cb()
   Together.CloseDb = ->
     winston.verbose "Together.CloseDb: closing redis connection"
     R.quit()
@@ -86,12 +91,12 @@ exports.listen = (io) ->
   sync = 
     create: (key, model, success, error) ->
       return false unless model.get('id')?
-      R.hexists key, model.get('id'), (err, result) ->
+      # R.hexists key, model.get('id'), (err, result) ->
+      #   return error err if err?
+      #   return error 'id already exists, use update' if result is 1
+      R.hset key, model.get('id'), JSON.stringify(model), (err, result) ->
         return error err if err?
-        return error 'id already exists, use update' if result is 1
-        R.hset key, model.get('id'), JSON.stringify(model), (err, result) ->
-          return error err if err?
-          return success model
+        return success model
       
     read: (key, model, success, error) ->
       return false unless model.get('id')?
@@ -102,14 +107,14 @@ exports.listen = (io) ->
       
     update: (key, model, success, error) ->
       return false unless model.get('id')?
-      R.hexists key, model.get('id'), (err, result) ->
+      # R.hexists key, model.get('id'), (err, result) ->
+      #   return error err if err?
+      #   if result is 0
+      #winston.verbose "Together.sync.update: #{model.get 'id'} id doesn't exist, calling create" 
+      #     return sync.create(key, model, success, error)
+      R.hset key, model.get('id'), JSON.stringify(model), (err, result) ->
         return error err if err?
-        if result is 0
-          winston.verbose "Together.sync.update: #{model.get 'id'} id doesn't exist, calling create" 
-          return sync.create(key, model, success, error)
-        R.hset key, model.get('id'), JSON.stringify(model), (err, result) ->
-          return error err if err?
-          return success model
+        return success model
       
     delete: (key, model, success, error) ->
       return error false unless model.get('id')?
