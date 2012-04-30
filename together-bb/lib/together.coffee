@@ -1,6 +1,7 @@
 Backbone = require 'backbone'
 redis = require 'redis'
 winston = require 'winston'
+_ = require 'underscore'
 
 exports.listen = (io) ->
   Together = {}
@@ -32,20 +33,26 @@ exports.listen = (io) ->
   
   class Together.Collection extends Backbone.Collection
     model: Together.Model
+    filters: {}
     constructor:(models, options) ->
-      super(models, options)
+      super
       unless options?.socket? and options.socket is false
         ions = io.of("/Together#{@url}")            
         ions.on 'connection', (socket) =>
           socket.emit 'reset', @
-          socket.on 'fetch', ({filter, filterParamters}) ->
+          socket.on 'fetch', ({filter, filterParameters}) ->
             socket.filter = filter
-            socket.filterParamters = filter
+            socket.filterParameters = filter
             
           @bind 'all', (eventName, data) ->
+            filter = filters[socket.filter]
+            dataToSend = data
+            if _(filter).isFunction()
+              dataToSend = filter(data, socket.filterParameters)
+            
             if eventName.indexOf(':') is -1
-              socket.emit eventName, data
-              socket.broadcast.emit eventName, data
+              socket.emit eventName, dataToSend
+              socket.broadcast.emit eventName, dataToSend
       
     sync: (method, model, options) ->        
       switch
