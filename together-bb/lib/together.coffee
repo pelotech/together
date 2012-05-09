@@ -1,6 +1,7 @@
 Backbone = require 'backbone'
 redis = require 'redis'
 winston = require 'winston'
+_ = require 'underscore'
 
 exports.listen = (io) ->
   Together = {}
@@ -32,14 +33,25 @@ exports.listen = (io) ->
   
   class Together.Collection extends Backbone.Collection
     model: Together.Model
+    filters: {}
     constructor:(models, options) ->
-      super(models, options)
+      super
       unless options?.socket? and options.socket is false
         ions = io.of("/Together#{@url}")            
         ions.on 'connection', (socket) =>
-          socket.emit 'reset', @
-          @bind 'all', (eventName, data) ->
+          socket.on 'fetch', (options, cb) =>
+            socket.filter = options?.filter
+            socket.filterParameters = options?.filterParameters
+            socket.emit 'reset', @
+            return cb()
+          @bind 'all', (eventName, data) ->      
+            winston.info "Together.Collection: got event #{eventName}"
             if eventName.indexOf(':') is -1
+              # socket.sockets.forEach (sock) ->
+              #   filter = @filters[sock.filter]
+              #   dataToSend = data
+              #   if _(filter).isFunction()
+              #     dataToSend = filter(data, sock.filterParameters)
               socket.emit eventName, data
               socket.broadcast.emit eventName, data
       
@@ -49,27 +61,36 @@ exports.listen = (io) ->
           winston.verbose "Together.Collection.sync: #{method} called on #{@url} collection"
           sync.reads @url, model, options, options.success, options.error
         else
-          winston.verbose "Together.Collection.sync: #{method} called on #{@url} collection but was not handled"
+          winston.warn "Together.Collection.sync: #{method} called on #{@url} collection but was not handled"
     createAll: (jsonArray, cb) ->
       cbCount = jsonArray.length
       cbIndex = 0
+      winston.info "createAll started with #{cbCount} items"
       cb() unless jsonArray.length > 0
-      for item in jsonArray
-        @create item, {success: () ->
+      callback = 
+        success: () ->
           if ++cbIndex >= cbCount
+            winston.info "all creates are finished with #{cbCount} items"
             return cb()
-        }
+
+      index = 0
+      for item in jsonArray
+        index++
+        do (item) =>
+          setTimeout((() => @create(item, callback)), index) 
+      winston.info "finished scheduling all creates for #{cbCount} items"
+
     destroyAll: (cb) ->
       copy = @models.slice(0)
       cbCount = @length
       cbIndex = 0
       cb() unless copy.length > 0
       copy.forEach (item) =>
-        item.destroy {success: () =>
-          if ++cbIndex >= cbCount
-            @reset()
-            return cb()
-        }
+        item.destroy 
+          success: () =>
+            if ++cbIndex >= cbCount
+              @reset()
+              return cb()
   Together.CloseDb = ->
     winston.verbose "Together.CloseDb: closing redis connection"
     R.quit()
@@ -78,12 +99,12 @@ exports.listen = (io) ->
   sync = 
     create: (key, model, success, error) ->
       return false unless model.get('id')?
-      R.hexists key, model.get('id'), (err, result) ->
+      # R.hexists key, model.get('id'), (err, result) ->
+      #   return error err if err?
+      #   return error 'id already exists, use update' if result is 1
+      R.hset key, model.get('id'), JSON.stringify(model), (err, result) ->
         return error err if err?
-        return error 'id already exists, use update' if result is 1
-        R.hset key, model.get('id'), JSON.stringify(model), (err, result) ->
-          return error err if err?
-          return success model
+        return success model
       
     read: (key, model, success, error) ->
       return false unless model.get('id')?
@@ -94,14 +115,14 @@ exports.listen = (io) ->
       
     update: (key, model, success, error) ->
       return false unless model.get('id')?
-      R.hexists key, model.get('id'), (err, result) ->
+      # R.hexists key, model.get('id'), (err, result) ->
+      #   return error err if err?
+      #   if result is 0
+      #winston.verbose "Together.sync.update: #{model.get 'id'} id doesn't exist, calling create" 
+      #     return sync.create(key, model, success, error)
+      R.hset key, model.get('id'), JSON.stringify(model), (err, result) ->
         return error err if err?
-        if result is 0
-          winston.verbose "Together.sync.update: #{model.get 'id'} id doesn't exist, calling create" 
-          return sync.create(key, model, success, error)
-        R.hset key, model.get('id'), JSON.stringify(model), (err, result) ->
-          return error err if err?
-          return success model
+        return success model
       
     delete: (key, model, success, error) ->
       return error false unless model.get('id')?
