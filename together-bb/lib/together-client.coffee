@@ -16,13 +16,6 @@ class @Together.Model extends Backbone.Model
       
 class @Together.Collection extends Backbone.Collection
   model: Together.Model
-  # potential filters are defined on the server side by Together.Collections
-  fetch: ({@filter, @filterParameters, success, error}) ->
-    @socket.emit 'fetch', {@filter, @filterParameters}, ({succ, err}) ->
-      if succ
-        return success() 
-      else
-        return error(err)
   constructor: (models, options) ->
     super(models, options)
     @socket = io.connect "#{window.location.origin}/Together#{@url}"
@@ -30,3 +23,5 @@ class @Together.Collection extends Backbone.Collection
       @reset(data)
     @socket.on 'add', (data) =>
       @add(data)
+  fetch: (options) ->
+    @socket.emit 'fetch', options, options.success

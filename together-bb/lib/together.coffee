@@ -39,20 +39,21 @@ exports.listen = (io) ->
       unless options?.socket? and options.socket is false
         ions = io.of("/Together#{@url}")            
         ions.on 'connection', (socket) =>
-          socket.emit 'reset', @
-          socket.on 'fetch', ({filter, filterParameters}) ->
-            socket.filter = filter
-            socket.filterParameters = filter
-            
-          @bind 'all', (eventName, data) ->
-            filter = filters[socket.filter]
-            dataToSend = data
-            if _(filter).isFunction()
-              dataToSend = filter(data, socket.filterParameters)
-            
+          socket.on 'fetch', (options, cb) =>
+            socket.filter = options?.filter
+            socket.filterParameters = options?.filterParameters
+            socket.emit 'reset', @
+            return cb()
+          @bind 'all', (eventName, data) ->      
+            winston.info "Together.Collection: got event #{eventName}"
             if eventName.indexOf(':') is -1
-              socket.emit eventName, dataToSend
-              socket.broadcast.emit eventName, dataToSend
+              # socket.sockets.forEach (sock) ->
+              #   filter = @filters[sock.filter]
+              #   dataToSend = data
+              #   if _(filter).isFunction()
+              #     dataToSend = filter(data, sock.filterParameters)
+              socket.emit eventName, data
+              socket.broadcast.emit eventName, data
       
     sync: (method, model, options) ->        
       switch
@@ -60,7 +61,7 @@ exports.listen = (io) ->
           winston.verbose "Together.Collection.sync: #{method} called on #{@url} collection"
           sync.reads @url, model, options, options.success, options.error
         else
-          winston.verbose "Together.Collection.sync: #{method} called on #{@url} collection but was not handled"
+          winston.warn "Together.Collection.sync: #{method} called on #{@url} collection but was not handled"
     createAll: (jsonArray, cb) ->
       cbCount = jsonArray.length
       cbIndex = 0
