@@ -18,8 +18,10 @@ class @Together.Collection extends Backbone.Collection
   model: Together.Model
   constructor: (models, options) ->
     super(models, options)
-    socket = io.connect "#{window.location.origin}/Together#{@url}"
-    socket.on 'reset', (data) =>
+    @socket = io.connect "#{window.location.origin}/Together#{@url}"
+    @socket.on 'reset', (data) =>
       @reset(data)
-    socket.on 'add', (data) =>
+    @socket.on 'add', (data) =>
       @add(data)
+  fetch: (options) ->
+    @socket.emit 'fetch', options, options.success
