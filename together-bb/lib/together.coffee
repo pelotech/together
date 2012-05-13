@@ -42,18 +42,20 @@ exports.listen = (io) ->
           socket.on 'fetch', (options, cb) =>
             socket.filter = options?.filter
             socket.filterParameters = options?.filterParameters
-            socket.emit 'reset', @
+            tryFilter(socket, 'reset', @)
             return cb()
           @bind 'all', (eventName, data) ->      
             winston.info "Together.Collection: got event #{eventName}"
             if eventName.indexOf(':') is -1
-              # socket.sockets.forEach (sock) ->
-              #   filter = @filters[sock.filter]
-              #   dataToSend = data
-              #   if _(filter).isFunction()
-              #     dataToSend = filter(data, sock.filterParameters)
-              socket.emit eventName, data
-              socket.broadcast.emit eventName, data
+              tryFilter(sock, eventName, data) for sock in ions.sockets
+                
+                
+    tryFilter: (socket, eventName, data) ->
+      filter = @filters[socket.filter]
+      dataToSend = data
+      if _(filter).isFunction()
+        dataToSend = filter(data, socket.filterParameters)
+        socket.emit eventName, dataToSend
       
     sync: (method, model, options) ->        
       switch
