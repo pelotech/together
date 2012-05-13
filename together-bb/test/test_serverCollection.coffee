@@ -2,7 +2,7 @@ winston = require 'winston'
 winston.remove winston.transports.Console
 winston.add winston.transports.Console,
   colorize: true,
-  level: 'verbose'
+  level: 'error'
   timestamp: true
 
 chai = require('chai')
@@ -21,7 +21,8 @@ describe 'Together.Collection', () ->
   model = Together.Model
   key = 'togetherTestingKey'
 
-  beforeEach () ->
+  beforeEach (done) ->
+    R.del key, done
     collection = new Together.Collection
     collection.model = model
     collection.url = key
@@ -63,6 +64,9 @@ describe 'Together.Collection', () ->
           internalDone()
 
     it 'is scalable', (done) ->
+      # turning off this test for now
+      return done()
+      
       @timeout 1000 * 60 * 2
       winston.info 'starting to create the items'
       max = 10000

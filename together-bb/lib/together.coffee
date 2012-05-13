@@ -42,12 +42,12 @@ exports.listen = (io) ->
           socket.on 'fetch', (options, cb) =>
             socket.filter = options?.filter
             socket.filterParameters = options?.filterParameters
-            tryFilter(socket, 'reset', @)
+            @tryFilter(socket, 'reset', @)
             return cb()
-          @bind 'all', (eventName, data) ->      
+          @bind 'all', (eventName, data) =>      
             winston.info "Together.Collection: got event #{eventName}"
             if eventName.indexOf(':') is -1
-              tryFilter(sock, eventName, data) for sock in ions.sockets
+              @tryFilter(sock, eventName, data) for sock in ions.sockets
                 
                 
     tryFilter: (socket, eventName, data) ->
