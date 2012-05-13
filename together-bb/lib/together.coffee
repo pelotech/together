@@ -55,7 +55,7 @@ exports.listen = (io) ->
       dataToSend = data
       if _(filter).isFunction()
         dataToSend = filter(data, socket.filterParameters)
-        socket.emit eventName, dataToSend
+      socket.emit eventName, dataToSend
       
     sync: (method, model, options) ->        
       switch
